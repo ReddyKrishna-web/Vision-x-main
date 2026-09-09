@@ -1,0 +1,8 @@
+node_modules
+.next
+data/*.db*
+data/uploads/*
+!data/uploads/.gitkeep
+.env
+.env.local
+.env.example
