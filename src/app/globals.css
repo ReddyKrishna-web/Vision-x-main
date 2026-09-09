@@ -1,0 +1,245 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  VISION X design system (source of truth).
+  Modern dark tech event product + subtle monospace identity.
+  Type: Inter (display/body) + Cutive Mono (labels/metadata/nav).
+  Color: Deep Ink neutrals ~70%, type hierarchy ~20%,
+  Electric Violet ~8%, Acid Lime signature ~2%.
+*/
+
+:root {
+  color-scheme: dark;
+  --void: #0B0D12;
+  --surface: #11141C;
+  --elevated: #171B25;
+  --line: #292F3D;
+  --accent: #8B5CF6;
+  --accent-soft: #A78BFA;
+  --lime: #C6FF4D;
+  --mint: #55D68A;
+  --gold: #F4B860;
+  --danger: #F06A78;
+  --ink: #F1F0EA;
+  --ink-2: #8C92A1;
+  --ink-3: #5C6272;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Quiet technical texture: barely-there neutral dots, whisper of violet up top. */
+.bg-scene {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(560px 240px at 50% -90px, rgba(139, 92, 246, 0.05), transparent 70%),
+    radial-gradient(rgba(140, 146, 161, 0.055) 1px, transparent 1px);
+  background-size: auto, 28px 28px;
+  background-position: center top, center top;
+  mask-image: linear-gradient(to bottom, black 0%, black 340px, transparent 620px);
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+/* Visible, consistent keyboard focus */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+/* ---------- Type ---------- */
+.page-title { @apply font-sans text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl; }
+.page-sub { @apply mt-1 font-sans text-[15px] leading-relaxed text-slate-400; }
+.section-title { @apply font-sans text-base font-semibold tracking-tight text-slate-100; }
+/* Eyebrow / section labels: the monospace identity voice */
+.eyebrow { @apply font-mono text-xs uppercase leading-relaxed tracking-[0.18em] text-slate-500; }
+.meta { @apply font-mono text-xs text-slate-500; }
+
+/* ---------- Buttons: flat violet, subtle press, no glow ---------- */
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-md bg-accent px-5 py-2.5 font-sans text-sm font-semibold text-ink transition-all duration-150
+    hover:bg-accent-soft
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft focus-visible:ring-offset-2 focus-visible:ring-offset-void
+    active:translate-y-[2px] active:shadow-none disabled:pointer-events-none disabled:opacity-40;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center rounded-md border border-white/15 bg-white/[0.03] px-4 py-2.5 font-sans text-sm font-semibold text-slate-200 transition-all duration-150
+    hover:border-white/25 hover:bg-white/[0.06] hover:text-ink
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft focus-visible:ring-offset-2 focus-visible:ring-offset-void
+    active:translate-y-[2px] disabled:pointer-events-none disabled:opacity-40;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center rounded-md border border-danger/30 bg-danger/10 px-4 py-2.5 font-sans text-sm font-semibold text-danger transition-all duration-150
+    hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/60
+    active:translate-y-[2px] disabled:pointer-events-none disabled:opacity-40;
+}
+.link { @apply font-medium text-accent-soft underline-offset-2 hover:underline; }
+
+/* ---------- Forms: calm, roomy, dark ---------- */
+.label { @apply mb-1.5 block font-sans text-sm font-medium text-slate-300; }
+.hint { @apply mt-1 font-sans text-xs leading-relaxed text-slate-500; }
+.input {
+  @apply w-full rounded-md border border-white/10 bg-white/[0.04] px-3.5 py-2.5 font-sans text-[15px] text-slate-100 placeholder-slate-500 outline-none transition duration-150
+    focus:border-accent focus:ring-2 focus:ring-accent/25;
+}
+select.input {
+  @apply pr-8;
+  color-scheme: dark;
+}
+select.input option { background-color: var(--elevated); color: var(--ink); }
+input[type="checkbox"].input, input[type="checkbox"] { accent-color: var(--accent); }
+input[type="file"].input { @apply cursor-pointer text-sm text-slate-400 file:mr-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink hover:file:bg-accent-soft; }
+.field-error { @apply mt-1.5 font-sans text-sm text-danger; }
+
+/* ---------- Surfaces: one card language, used only where grouping helps ---------- */
+.card { @apply rounded-lg border border-white/10 bg-surface p-5 shadow-card sm:p-6; }
+.card-flat { @apply rounded-lg border border-white/10 bg-surface p-4; }
+.divider { @apply border-white/10; }
+
+/* ---------- Data tables (admin density, calm) ---------- */
+table.data { @apply w-full border-collapse font-sans text-sm; }
+table.data th { @apply whitespace-nowrap border-b border-white/10 px-3 py-2.5 text-left font-mono text-xs uppercase tracking-[0.12em] text-slate-500; }
+table.data td { @apply border-b border-white/5 px-3 py-2.5 align-top text-slate-300; }
+table.data tbody tr:last-child td { @apply border-b-0; }
+table.data tbody tr.rowlink { @apply cursor-pointer transition duration-150 hover:bg-white/[0.03]; }
+
+/* ---------- Status pills: mono labels, text + square dot ---------- */
+.badge { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded px-2.5 py-0.5 font-mono text-xs; }
+.badge .dot { @apply h-1.5 w-1.5 rounded-[2px] bg-current; }
+.badge-ok { @apply bg-mint/10 text-mint ring-1 ring-inset ring-mint/25; }
+.badge-warn { @apply bg-gold/10 text-gold ring-1 ring-inset ring-gold/25; }
+.badge-bad { @apply bg-danger/10 text-danger ring-1 ring-inset ring-danger/25; }
+.badge-info { @apply bg-sky-400/10 text-sky-300 ring-1 ring-inset ring-sky-400/25; }
+.badge-neutral { @apply bg-white/[0.06] text-slate-400 ring-1 ring-inset ring-white/10; }
+.badge-accent { @apply bg-accent/15 text-accent-soft ring-1 ring-inset ring-accent/30; }
+
+/* ---------- Alerts: calm semantic panels ---------- */
+.alert { @apply rounded-md border p-3.5 font-sans text-sm leading-relaxed; }
+.alert-error { @apply border-danger/25 bg-danger/[0.08] text-rose-200; }
+.alert-warn { @apply border-gold/25 bg-gold/[0.07] text-amber-200; }
+.alert-info { @apply border-sky-400/25 bg-sky-400/[0.08] text-sky-200; }
+.alert-ok { @apply border-mint/25 bg-mint/[0.08] text-emerald-200; }
+
+/* ---------- Steps: square numbers, violet = active ---------- */
+.stepper { @apply flex flex-wrap items-center gap-x-2 gap-y-2; }
+.step-item { @apply flex items-center gap-2 font-sans text-sm; }
+.step-num {
+  @apply grid h-6 w-6 place-items-center rounded font-mono text-xs ring-1 ring-inset;
+}
+.step-active .step-num { @apply bg-accent text-ink ring-accent; }
+.step-active .step-name { @apply font-semibold text-slate-100; }
+.step-todo .step-num { @apply bg-elevated text-slate-500 ring-white/10; }
+.step-todo .step-name { @apply text-slate-500; }
+.step-done .step-num { @apply bg-mint/15 text-mint ring-mint/30; }
+.step-done .step-name { @apply text-slate-400; }
+
+/* ---------- Misc ---------- */
+.metric-label { @apply font-mono text-xs uppercase tracking-[0.14em] text-slate-500; }
+.metric-value { @apply mt-1 font-sans text-3xl font-bold tracking-tight text-slate-100; }
+.empty { @apply rounded-lg border border-dashed border-white/15 bg-surface/70 px-6 py-10 text-center; }
+.skeleton { @apply animate-pulse rounded bg-white/10; }
+.timeline-rail { @apply w-px flex-1 bg-white/10; }
+
+/* QR codes must stay scannable: always on a white pad in dark UI */
+.qr-scan { @apply rounded-md border border-white/10 bg-white p-2; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; color: black; }
+  .bg-scene { display: none !important; }
+}
+
+/* ---------- Signature details: lime squares, used sparingly ---------- */
+
+/* Corner-cut frame for the logo mark */
+.px-corners {
+  clip-path: polygon(
+    0 6px, 6px 6px, 6px 0,
+    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+  );
+}
+
+/* Acid Lime signature tick — section numbers, timeline markers, tiny indicators */
+.px-tick { @apply inline-block h-2 w-2 rounded-[2px] bg-lime; }
+.px-tick-live { @apply inline-block h-2 w-2 rounded-[2px] bg-lime animate-px-blink; }
+
+/* Segmented loading bar (payment / verification states) */
+.px-loader { @apply flex gap-1; }
+.px-loader > span {
+  @apply h-2 w-5 rounded-[2px] bg-white/10;
+  animation: px-seg 1.1s steps(3, jump-none) infinite;
+}
+.px-loader > span:nth-child(2) { animation-delay: 0.15s; }
+.px-loader > span:nth-child(3) { animation-delay: 0.3s; }
+.px-loader > span:nth-child(4) { animation-delay: 0.45s; }
+@keyframes px-seg {
+  0%, 100% { background: rgba(255, 255, 255, 0.1); }
+  50% { background: var(--accent); }
+}
+
+/* ---------- Motion: subtle, fast, purposeful ---------- */
+
+/* Scroll reveal — elements fade up 8px once when they enter view */
+.reveal { opacity: 0; transform: translateY(8px); transition: opacity .2s ease-out, transform .2s ease-out; }
+.reveal.revealed { opacity: 1; transform: none; }
+.reveal-d1 { transition-delay: .06s; }
+.reveal-d2 { transition-delay: .12s; }
+.reveal-d3 { transition-delay: .18s; }
+
+/* Page entrance */
+.enter { animation: fadeUp .22s cubic-bezier(.22,1,.36,1) both; }
+.enter-d1 { animation-delay: .06s; }
+.enter-d2 { animation-delay: .12s; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Slow marquee — decorative rhythm strip */
+.marquee { overflow: hidden; white-space: nowrap; }
+.marquee-track { display: inline-block; animation: marquee 36s linear infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Stepped confirmation check (success moments) */
+.check-draw circle { stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw .3s steps(12) forwards; }
+.check-draw path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw .25s .25s steps(8) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Thin step progress */
+.stepbar { @apply h-1 overflow-hidden rounded-full bg-white/10; }
+.stepbar > div { @apply h-full rounded-full bg-accent transition-all duration-200 ease-out; }
+
+/* Arrow nudge on primary actions */
+.btn-primary .arr { @apply ml-1.5 inline-block transition-transform duration-150; }
+.btn-primary:hover .arr { transform: translateX(3px); }
+
+/* Card hover — barely lifts */
+.lift { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.lift:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+
+/* Dark scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #292F3D transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #292F3D; border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .enter, .enter-d1, .enter-d2 { animation: none; }
+  .marquee-track { animation: none; }
+  .check-draw circle, .check-draw path { animation: none; stroke-dashoffset: 0; }
+  .stepbar > div { transition: none; }
+  .lift:hover { transform: none; }
+  .px-tick-live, .px-loader > span { animation: none; }
+  .btn-primary, .btn-ghost, .btn-danger { transition: none; }
+  .btn-primary:hover .arr { transform: none; }
+}
