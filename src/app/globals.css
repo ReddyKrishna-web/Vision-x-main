@@ -1,0 +1,245 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  VISION X 2.0 — "Soft Dawn" design system.
+  Warm paper background, deep plum ink, Electric Violet brand,
+  Lime spark used sparingly. Friendly, premium, calm.
+  Type: Bricolage Grotesque (display) + Inter (body) + Cutive Mono (labels).
+*/
+
+:root {
+  color-scheme: light;
+  --paper: #F6F2EA;
+  --surface: #FFFFFF;
+  --elevated: #FFFDF7;
+  --line: #E7DFD0;
+  --ink: #1D152E;
+  --ink-2: #5C546E;
+  --ink-3: #8F87A3;
+  --accent: #6C4CF1;
+  --accent-deep: #4A2FD6;
+  --accent-soft: #E8E0FF;
+  --lime: #D9F450;
+  --mint: #1E9E6A;
+  --gold: #B45309;
+  --danger: #D93A4E;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* Soft atmospheric scene: warm wash + violet/peach/mint blobs + faint dot grid */
+.bg-scene {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(720px 420px at 12% -80px, rgba(108,76,241,0.14), transparent 65%),
+    radial-gradient(640px 400px at 88% 8%, rgba(255,181,158,0.20), transparent 65%),
+    radial-gradient(560px 380px at 78% 88%, rgba(30,158,106,0.10), transparent 65%),
+    radial-gradient(900px 500px at 50% 120%, rgba(217,244,80,0.12), transparent 60%),
+    var(--paper);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(rgba(29,21,46,0.10) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(to bottom, black 0%, black 420px, transparent 720px);
+  opacity: 0.5;
+}
+
+::selection { background: var(--ink); color: #fff; }
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid rgba(108,76,241,0.45);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ---------- Type ---------- */
+.font-display { font-family: "Bricolage Grotesque", Inter, sans-serif; }
+.page-title { @apply font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl; letter-spacing: -0.03em; }
+.page-sub { @apply mt-2 font-sans text-[15px] leading-relaxed text-ink-soft; }
+.section-title { @apply font-display text-xl font-bold tracking-tight text-ink; letter-spacing: -0.02em; }
+.eyebrow {
+  @apply inline-flex items-center gap-2 font-mono text-xs uppercase leading-relaxed tracking-[0.18em] text-ink-soft;
+}
+.eyebrow::before { content: ""; @apply inline-block h-2 w-2 rounded-[4px] bg-accent; }
+.meta { @apply font-mono text-xs text-ink-muted; }
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-ink px-5 py-3 font-sans text-sm font-semibold text-white transition-all duration-200
+    hover:-translate-y-[1px] hover:bg-accent-deep hover:shadow-pop
+    focus-visible:outline-none
+    active:translate-y-0 active:shadow-none disabled:pointer-events-none disabled:opacity-40;
+  box-shadow: 0 3px 0 rgba(29,21,46,0.9);
+}
+.btn-violet {
+  @apply inline-flex items-center justify-center rounded-2xl bg-accent px-5 py-3 font-sans text-sm font-semibold text-white transition-all duration-200
+    hover:-translate-y-[1px] hover:bg-accent-deep hover:shadow-pop
+    active:translate-y-0 disabled:pointer-events-none disabled:opacity-40;
+  box-shadow: 0 3px 0 rgba(74,47,214,0.9);
+}
+.btn-lime {
+  @apply inline-flex items-center justify-center rounded-2xl bg-lime px-5 py-3 font-sans text-sm font-bold text-ink transition-all duration-200
+    hover:-translate-y-[1px] hover:brightness-[1.03] hover:shadow-pop
+    active:translate-y-0 disabled:pointer-events-none disabled:opacity-40;
+  box-shadow: 0 3px 0 rgba(29,21,46,0.9);
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-white/70 px-4 py-3 font-sans text-sm font-semibold text-ink backdrop-blur transition-all duration-200
+    hover:-translate-y-[1px] hover:border-ink/20 hover:bg-white hover:shadow-card
+    active:translate-y-0 disabled:pointer-events-none disabled:opacity-40;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center rounded-2xl border border-danger/25 bg-dangerbg px-4 py-2.5 font-sans text-sm font-semibold text-danger transition-all duration-200
+    hover:bg-danger hover:text-white active:translate-y-0 disabled:pointer-events-none disabled:opacity-40;
+}
+.link { @apply font-semibold text-accent-deep underline-offset-4 decoration-accent/40 hover:underline; }
+
+/* ---------- Forms ---------- */
+.label { @apply mb-1.5 block font-sans text-sm font-semibold text-ink; }
+.hint { @apply mt-1.5 font-sans text-xs leading-relaxed text-ink-muted; }
+.input {
+  @apply w-full rounded-xl border border-ink/10 bg-white px-3.5 py-3 font-sans text-[15px] text-ink placeholder-ink-muted/70 outline-none transition duration-200 shadow-[0_1px_0_rgba(29,21,46,0.04)]
+    focus:border-accent focus:ring-4 focus:ring-accent/15 focus:bg-white;
+}
+select.input { @apply pr-9; color-scheme: light; }
+select.input option { background-color: #fff; color: var(--ink); }
+input[type="checkbox"].input, input[type="checkbox"] { accent-color: var(--accent); }
+input[type="file"].input { @apply cursor-pointer text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white; }
+.field-error { @apply mt-1.5 font-sans text-sm font-medium text-danger; }
+
+/* ---------- Surfaces ---------- */
+.card { @apply rounded-[22px] border border-ink/[0.07] bg-white/90 p-5 shadow-card backdrop-blur-sm sm:p-7; }
+.card-flat { @apply rounded-2xl border border-ink/[0.07] bg-white/80 p-4 shadow-[0_1px_2px_rgba(29,21,46,0.05)] backdrop-blur-sm; }
+.card-glass { @apply rounded-[22px] border border-white/60 bg-white/70 shadow-card backdrop-blur-xl; }
+.card-dark { @apply rounded-[26px] bg-ink text-white shadow-pop; }
+.divider { @apply border-ink/10; }
+
+/* ---------- Data tables ---------- */
+table.data { @apply w-full border-collapse font-sans text-sm; }
+table.data th { @apply whitespace-nowrap border-b border-ink/10 px-3 py-3 text-left font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted; }
+table.data td { @apply border-b border-ink/[0.06] px-3 py-3 align-top text-ink-soft; }
+table.data tbody tr:last-child td { @apply border-b-0; }
+table.data tbody tr.rowlink { @apply cursor-pointer transition duration-150 hover:bg-accent/[0.05]; }
+
+/* ---------- Status pills ---------- */
+.badge { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 font-sans text-xs font-semibold; }
+.badge .dot { @apply h-1.5 w-1.5 rounded-full bg-current; }
+.badge-ok { @apply bg-mintbg text-mint ring-1 ring-inset ring-mint/25; }
+.badge-warn { @apply bg-goldbg text-gold ring-1 ring-inset ring-gold/25; }
+.badge-bad { @apply bg-dangerbg text-danger ring-1 ring-inset ring-danger/25; }
+.badge-info { @apply bg-skybg text-sky ring-1 ring-inset ring-sky/25; }
+.badge-neutral { @apply bg-ink/[0.06] text-ink-soft ring-1 ring-inset ring-ink/10; }
+.badge-accent { @apply bg-accent/10 text-accent-deep ring-1 ring-inset ring-accent/25; }
+
+/* ---------- Alerts ---------- */
+.alert { @apply rounded-2xl border p-4 font-sans text-sm leading-relaxed; }
+.alert-error { @apply border-danger/20 bg-dangerbg text-[#7A1F2B]; }
+.alert-warn { @apply border-gold/25 bg-goldbg text-[#7A4A0A]; }
+.alert-info { @apply border-sky/25 bg-skybg text-[#1A3F8F]; }
+.alert-ok { @apply border-mint/25 bg-mintbg text-[#0C5C38]; }
+
+/* ---------- Steps ---------- */
+.stepper { @apply flex flex-wrap items-center gap-x-2 gap-y-2; }
+.step-item { @apply flex items-center gap-2 font-sans text-sm; }
+.step-num { @apply grid h-8 w-8 place-items-center rounded-full font-display text-sm font-bold ring-1 ring-inset transition-all; }
+.step-active .step-num { @apply bg-ink text-white ring-ink shadow-card scale-105; }
+.step-active .step-name { @apply font-bold text-ink; }
+.step-todo .step-num { @apply bg-white text-ink-muted ring-ink/10; }
+.step-todo .step-name { @apply text-ink-muted; }
+.step-done .step-num { @apply bg-mintbg text-mint ring-mint/30; }
+.step-done .step-name { @apply text-ink-soft; }
+
+/* ---------- Misc ---------- */
+.metric-label { @apply font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted; }
+.metric-value { @apply mt-1 font-display text-3xl font-bold tracking-tight text-ink; }
+.empty { @apply rounded-[22px] border border-dashed border-ink/15 bg-white/70 px-6 py-12 text-center backdrop-blur; }
+.skeleton { @apply animate-pulse rounded-xl bg-ink/10; }
+.timeline-rail { @apply w-px flex-1 bg-ink/10; }
+.qr-scan { @apply rounded-2xl border border-ink/10 bg-white p-3 shadow-card; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; color: black; }
+  .bg-scene, .bg-grid { display: none !important; }
+}
+
+/* ---------- Signature details ---------- */
+.px-corners { border-radius: 12px 12px 12px 4px; }
+.px-tick { @apply inline-block h-2 w-2 rounded-[4px] bg-limedeep; }
+.px-tick-live { @apply inline-block h-2 w-2 rounded-full bg-mint animate-px-blink; }
+
+.px-loader { @apply flex gap-1.5; }
+.px-loader > span {
+  @apply h-2.5 w-7 rounded-full bg-ink/10;
+  animation: px-seg 1.1s ease-in-out infinite;
+}
+.px-loader > span:nth-child(2) { animation-delay: 0.15s; }
+.px-loader > span:nth-child(3) { animation-delay: 0.3s; }
+.px-loader > span:nth-child(4) { animation-delay: 0.45s; }
+@keyframes px-seg {
+  0%, 100% { background: rgba(29,21,46,0.1); transform: scaleX(1); }
+  50% { background: var(--accent); transform: scaleX(1.1); }
+}
+
+/* ---------- Motion ---------- */
+.reveal { opacity: 0; transform: translateY(12px); transition: opacity .45s cubic-bezier(.22,1,.36,1), transform .45s cubic-bezier(.22,1,.36,1); }
+.reveal.revealed { opacity: 1; transform: none; }
+.reveal-d1 { transition-delay: .07s; }
+.reveal-d2 { transition-delay: .14s; }
+.reveal-d3 { transition-delay: .21s; }
+
+.enter { animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both; }
+.enter-d1 { animation-delay: .07s; }
+.enter-d2 { animation-delay: .14s; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.marquee { overflow: hidden; white-space: nowrap; }
+.marquee-track { display: inline-block; animation: marquee 32s linear infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.check-draw circle { stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw .4s ease-out forwards; }
+.check-draw path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw .3s .3s ease-out forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.stepbar { @apply h-2 overflow-hidden rounded-full bg-ink/10; }
+.stepbar > div { @apply h-full rounded-full transition-all duration-500 ease-out; background: linear-gradient(90deg, var(--accent), #9D7BFF); }
+
+.btn-primary .arr, .btn-violet .arr, .btn-lime .arr { @apply ml-1.5 inline-block transition-transform duration-200; }
+.btn-primary:hover .arr, .btn-violet:hover .arr, .btn-lime:hover .arr { transform: translateX(4px); }
+
+.lift { transition: transform .25s cubic-bezier(.22,1,.36,1), border-color .25s ease, box-shadow .25s ease; }
+.lift:hover { transform: translateY(-3px); border-color: rgba(108,76,241,0.25); box-shadow: 0 2px 6px rgba(29,21,46,0.06), 0 20px 40px -16px rgba(76,45,214,0.25); }
+
+.float-soft { animation: float 6s ease-in-out infinite; }
+.blob { position: absolute; border-radius: 9999px; filter: blur(60px); pointer-events: none; }
+
+/* Light scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #D8CFBE transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: #D8CFBE; border-radius: 8px; border: 2px solid #F6F2EA; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .enter, .enter-d1, .enter-d2 { animation: none; }
+  .marquee-track { animation: none; }
+  .check-draw circle, .check-draw path { animation: none; stroke-dashoffset: 0; }
+  .stepbar > div { transition: none; }
+  .lift:hover, .btn-primary:hover, .btn-ghost:hover { transform: none; }
+  .px-tick-live, .px-loader > span, .float-soft { animation: none; }
+}
