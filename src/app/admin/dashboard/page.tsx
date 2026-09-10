@@ -25,6 +25,7 @@ export default function AdminDash() {
         <nav className="flex flex-wrap gap-2" aria-label="Admin sections">
           <Link href="/admin/registrations" className="btn-ghost !py-2 text-sm">Registrations</Link>
           <Link href="/admin/payments" className="btn-ghost !py-2 text-sm">Payments</Link>
+          <Link href="/admin/payment-settings" className="btn-ghost !py-2 text-sm">Payment Settings</Link>
           <Link href="/admin/data-sync" className="btn-ghost !py-2 text-sm">Excel sync</Link>
           <Link href="/admin/settings" className="btn-ghost !py-2 text-sm">Settings</Link>
         </nav>

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { audit, db, getSettings, nextRegistrationId } from '@/lib/db';
 import { memberSchema, sanitize, teamInfoSchema } from '@/lib/validators';
-import { createRazorpayOrder, razorpayConfigured, razorpayKeyId } from '@/lib/payment/razorpay';
-import { setPaymentStatus } from '@/lib/payment/payment-router';
+import { upiPaymentsConfigured } from '@/lib/payment/upi';
 import { assessPaymentRisk } from '@/lib/fraud';
 
 export const runtime = 'nodejs';
@@ -24,16 +23,17 @@ function rateLimit(): boolean {
   return true;
 }
 
-// Creates a registration draft (PAYMENT_PENDING) + internal payment record +
-// Razorpay order. Amount is authoritative server-side; the client only receives
-// the public Key ID + order id needed for Razorpay Checkout.
+// Creates a registration (PENDING_PAYMENT) + manual-UPI payment record
+// (PENDING). No gateway order is created: the user pays by scanning the
+// admin-configured QR in their own UPI app, then submits the UTR proof via
+// POST /api/payments/submit-proof. Amount is authoritative server-side.
 export async function POST(req: NextRequest) {
   try {
     if (!rateLimit()) return NextResponse.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 });
     const s = getSettings();
     if (!s.reg_open) return NextResponse.json({ error: 'Registrations are currently closed.' }, { status: 403 });
-    if (!razorpayConfigured()) {
-      return NextResponse.json({ error: 'Online payment is not configured yet. Please try again later.' }, { status: 503 });
+    if (!upiPaymentsConfigured()) {
+      return NextResponse.json({ error: 'UPI payment is not configured yet. Please try again later.' }, { status: 503 });
     }
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -60,54 +60,26 @@ export async function POST(req: NextRequest) {
 
     const payRow: any = db().prepare(
       `INSERT INTO payments (registration_id,provider,amount,currency,payment_method,payment_status,verification_status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
-    ).run(regId, 'razorpay', fee, 'INR', 'RAZORPAY', 'CREATED', 'UNVERIFIED', now, now);
+    ).run(regId, 'upi_manual', fee, 'INR', 'UPI', 'PENDING', 'UNVERIFIED', now, now);
     const paymentId = Number(payRow.lastInsertRowid);
 
-    let order;
-    try {
-      order = await createRazorpayOrder({
-        registrationId: regId,
-        amountRupees: fee,
-        teamName: team.teamName,
-        customerName: team.leaderName,
-        customerEmail: team.leaderEmail,
-        customerPhone: team.leaderPhone,
-      });
-    } catch (e: any) {
-      try { setPaymentStatus(paymentId, 'FAILED', { event: 'PAYMENT_ORDER_FAILED' }); } catch {}
-      if (e?.log) audit('PAYMENT_ORDER_FAILED', '', regId, String(e.log).slice(0, 300));
-      return NextResponse.json({ error: e?.message || 'Payment session could not be created. Please try again.' }, { status: e?.status || 502 });
-    }
-    db().prepare(`UPDATE payments SET provider_order_id=?, provider_session_id=?, payment_reference=?, payment_status='PENDING', updated_at=? WHERE id=?`)
-      .run(order.id, order.id, order.id, now, paymentId);
-
-    // Baseline fraud screen (duplicates/velocity) at order time.
+    // Baseline fraud screen (duplicates/velocity) at registration time.
     try {
       assessPaymentRisk({
         registrationId: regId, paymentId, amount: fee, expectedAmount: fee,
         memberRolls: members.map((m) => m.rollNumber), email: team.leaderEmail, phone: team.leaderPhone,
         ip: req.headers.get('x-forwarded-for') || '',
       });
-    } catch { /* never block order creation on risk engine errors */ }
+    } catch { /* never block registration on risk engine errors */ }
 
-    audit('PAYMENT_CREATED', '', regId, 'provider=razorpay');
+    audit('PAYMENT_CREATED', '', regId, 'provider=upi_manual');
     return NextResponse.json({
       registrationId: regId,
       paymentId,
-      provider: 'razorpay',
-      checkout: {
-        provider: 'razorpay',
-        orderId: order.id,
-        amount: fee,
-        amountPaise: order.amount,
-        currency: order.currency,
-        keyId: razorpayKeyId(),
-        registrationId: regId,
-        teamName: team.teamName,
-        customerName: team.leaderName,
-        customerEmail: team.leaderEmail,
-        customerPhone: team.leaderPhone,
-      },
+      provider: 'upi_manual',
+      amount: fee,
+      currency: 'INR',
+      teamName: team.teamName,
     });
   } catch (e: any) {
     return NextResponse.json({ error: 'Could not start payment. Please try again.' }, { status: e?.status || 500 });

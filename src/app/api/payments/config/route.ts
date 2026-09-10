@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
-import { razorpayConfigured, razorpayKeyId } from '@/lib/payment/razorpay';
 import { getSettings } from '@/lib/db';
+import { upiId, upiPaymentsConfigured } from '@/lib/payment/upi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Public payment configuration — safe fields only. The Key SECRET is never exposed.
+// Public payment configuration — safe fields only. The UPI ID and QR image
+// are display data by design (payers need them); there are no secrets here.
 export async function GET() {
   const s = getSettings();
-  const configured = razorpayConfigured();
+  const configured = upiPaymentsConfigured();
   return NextResponse.json({
-    provider: 'razorpay',
+    provider: 'upi_manual',
     configured,
-    keyId: configured ? razorpayKeyId() : '',
+    upiId: configured ? upiId() : '',
+    qrImageUrl: '/api/payment-qr',
     fee: s.registration_fee || 0,
     currency: 'INR',
   });

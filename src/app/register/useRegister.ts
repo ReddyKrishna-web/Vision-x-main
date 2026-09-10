@@ -38,14 +38,15 @@ export function useRegister() {
     }
     return '';
   }
-  // Submit registration -> server creates PENDING_PAYMENT + Razorpay order -> checkout.
+  // Submit registration -> server saves it (PENDING_PAYMENT) -> continue to
+  // the UPI payment screen, where the team scans the QR and submits proof.
   async function pay() {
     setErr('');
     const a = validTeam(); if (a) { setErr(a); return; }
     const b = validMembers(); if (b) { setErr(b); return; }
     if (!consent) { setErr('Please accept the consent checkbox.'); return; }
     if (cfg && cfg.paymentsConfigured === false) {
-      setErr('Online payment isn’t enabled yet. Please try again once payments are enabled.');
+      setErr('UPI payment isn’t enabled yet. Please try again once payments are enabled.');
       return;
     }
     setBusy(true);
@@ -55,72 +56,10 @@ export function useRegister() {
         body: JSON.stringify({ team: { ...d.team, teamSize: Number(d.team.teamSize) }, members: d.members, consent: true }),
       });
       const j = await r.json();
-      if (!r.ok) { setErr(j.error || 'Could not start payment. Please try again.'); return; }
+      if (!r.ok) { setErr(j.error || 'Could not save registration. Please try again.'); return; }
       try { localStorage.removeItem(KEY); } catch {}
-      await openCheckout(j);
-    } finally { setBusy(false); }
-  }
-  async function openCheckout(ord: any) {
-    setErr('');
-    try {
-      await loadRazorpayScript();
-      const Rzp: any = (window as any).Razorpay;
-      if (!Rzp || !ord?.checkout?.orderId || !ord?.checkout?.keyId) throw new Error('Checkout unavailable');
-      const c = ord.checkout;
-      const rzp = new Rzp({
-        key: c.keyId,
-        amount: c.amountPaise,
-        currency: c.currency || 'INR',
-        name: 'Vision X 2026',
-        description: `Team ${c.teamName} — registration fee`,
-        order_id: c.orderId,
-        prefill: { name: c.customerName, email: c.customerEmail, contact: c.customerPhone },
-        notes: { registration_id: c.registrationId },
-        theme: { color: '#8B5CF6' },
-        modal: { ondismiss: () => { router.push('/success?id=' + ord.registrationId); } },
-        handler: (resp: any) => { void verify(ord, resp); },
-      });
-      rzp.on('payment.failed', () => {
-        setErr('Payment could not be completed. No money was confirmed — use “Try again” on the next screen.');
-        router.push('/success?id=' + ord.registrationId);
-      });
-      rzp.open();
-    } catch {
-      setErr('The secure checkout could not open. Your registration is saved — please try again.');
-    }
-  }
-  async function verify(ord: any, resp: any) {
-    setBusy(true);
-    try {
-      const r = await fetch('/api/payments/verify', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          registrationId: ord.registrationId,
-          paymentId: ord.paymentId,
-          razorpay_order_id: resp?.razorpay_order_id,
-          razorpay_payment_id: resp?.razorpay_payment_id,
-          razorpay_signature: resp?.razorpay_signature,
-          clientClaimedSuccess: true,
-        }),
-      });
-      const j = await r.json();
-      if (!r.ok && j.status !== 'PENDING' && j.status !== 'FAILED') {
-        setErr(j.error || 'Verification hit a snag. Your registration is saved — check its status.');
-        return;
-      }
-      router.push('/success?id=' + ord.registrationId);
+      router.push('/payment?id=' + j.registrationId);
     } finally { setBusy(false); }
   }
   return { cfg, d, setD, set, err, setErr, busy, consent, setConsent, validTeam, validMembers, pay };
-}
-
-function loadRazorpayScript(): Promise<void> {
-  const src = 'https://checkout.razorpay.com/v1/checkout.js';
-  return new Promise((resolve, reject) => {
-    if ((window as any).Razorpay) return resolve();
-    const s = document.createElement('script');
-    s.src = src; s.async = true;
-    s.onload = () => resolve(); s.onerror = () => reject(new Error('sdk'));
-    document.head.appendChild(s);
-  });
 }

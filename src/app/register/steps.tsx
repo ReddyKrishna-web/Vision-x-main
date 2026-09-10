@@ -30,7 +30,7 @@ export function PayStep({ cfg, team, members, busy, consent, setConsent, onPay, 
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold tracking-tight">Almost there 💳</h2>
-          <p className="page-sub">Secure online payment via Razorpay. Your spot is confirmed only after our server verifies it.</p>
+          <p className="page-sub">Pay securely with UPI on the next screen. Your spot is confirmed after our team verifies it.</p>
         </div>
         <span className="rounded-2xl bg-lime px-4 py-2 text-center font-display text-lg font-bold leading-none">Rs.{cfg?.fee}<br /><span className="font-mono text-[10px] font-normal">INR total</span></span>
       </div>
@@ -52,13 +52,13 @@ export function PayStep({ cfg, team, members, busy, consent, setConsent, onPay, 
       </label>
       {err && <div className="mt-3"><Alert kind="error">{err}</Alert></div>}
       {gatewayDown && (
-        <div className="mt-3"><Alert kind="warn">Online payment isn&apos;t enabled yet. Your details above are saved in this browser — please try again once payments are enabled.</Alert></div>
+        <div className="mt-3"><Alert kind="warn">UPI payment isn&apos;t enabled yet. Your details above are saved in this browser — please try again once payments are enabled.</Alert></div>
       )}
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <button className="btn-ghost sm:!px-8" onClick={onBack}>← Back</button>
-        <button className="btn-violet flex-1 !py-4 text-base" disabled={!consent || busy || gatewayDown} onClick={onPay}>{busy ? 'Opening secure checkout…' : <>Proceed to pay <span className="arr">→</span></>}</button>
+        <button className="btn-violet flex-1 !py-4 text-base" disabled={!consent || busy || gatewayDown} onClick={onPay}>{busy ? 'Saving registration…' : <>Save & continue to payment <span className="arr">→</span></>}</button>
       </div>
-      <p className="hint mt-3 text-center">UPI, cards, and netbanking are accepted inside the Razorpay checkout. 🔒 Card details never touch this site.</p>
+      <p className="hint mt-3 text-center">Next: scan our UPI QR with any UPI app and submit your transaction reference. 🔒 This site never sees your UPI PIN.</p>
     </div>
   );
 }

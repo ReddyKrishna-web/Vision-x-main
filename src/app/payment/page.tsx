@@ -3,28 +3,44 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, PxLoader } from '@/components/ui';
 
-const STAGES = [
-  'Preparing your payment…',
-  'Creating a secure Razorpay order…',
-  'Opening Razorpay Checkout…',
-  'Waiting for your payment…',
-  'Verifying payment with Razorpay…',
-  'Checking your registration…',
-  'Confirming your spot…',
-];
+const SHOT_MAX_BYTES = Math.round(2.5 * 1024 * 1024);
 
 export default function PaymentPage() {
   const router = useRouter();
   const [cfg, setCfg] = useState<any>(null);
   const [form, setForm] = useState<any>({ teamName: '', teamSize: 2, leaderName: '', leaderEmail: '', leaderPhone: '' });
   const [members, setMembers] = useState<any[]>([{ name: '', rollNumber: '', email: '' }, { name: '', rollNumber: '', email: '' }]);
-  const [stage, setStage] = useState(-1);
   const [err, setErr] = useState('');
-  const [order, setOrder] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [reg, setReg] = useState<any>(null);
+  const [utr, setUtr] = useState('');
+  const [shot, setShot] = useState('');
+  const [shotName, setShotName] = useState('');
+  const [proofBusy, setProofBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [qrOk, setQrOk] = useState(true);
+  const [qrTs] = useState(() => Date.now());
 
   useEffect(() => {
     fetch('/api/payments/config').then((r) => r.json()).then(setCfg).catch(() => {});
+    // Resume mode: /payment?id=REGID (e.g. coming from the register wizard).
+    try {
+      const id = new URLSearchParams(window.location.search).get('id') || '';
+      if (!id) return;
+      fetch('/api/payments/status?registrationId=' + encodeURIComponent(id))
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (j?.registration) {
+            setReg({
+              registrationId: j.registration.registration_id,
+              amount: j.payment?.amount ?? j.registration.fee ?? null,
+              teamName: j.registration.team_name,
+              status: j.payment?.payment_status || '',
+            });
+          }
+        })
+        .catch(() => {});
+    } catch {}
   }, []);
 
   const set = (k: string, v: string | number) => setForm({ ...form, [k]: v });
@@ -36,124 +52,86 @@ export default function PaymentPage() {
     const c = [...members]; c[i] = { ...c[i], [k]: v }; setMembers(c);
   };
 
-  // Step 1: validate locally, then ask OUR server for a Razorpay order.
+  // Step 1: save registration, then show the UPI payment panel.
   async function startPayment() {
     setErr('');
     if (!form.teamName || !form.leaderName || !form.leaderEmail || !form.leaderPhone) {
       setErr('Please fill in the team name and leader details first.'); return;
     }
-    setBusy(true); setStage(0);
+    setBusy(true);
     try {
-      setStage(1);
       const r = await fetch('/api/payments/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ team: { ...form, teamSize: Number(form.teamSize) }, members, consent: true }),
       });
       const j = await r.json();
-      if (!r.ok) { setErr(j.error || 'We could not start your payment. Please try again.'); setStage(-1); return; }
-      setOrder(j);
-      setStage(2);
-      await openRazorpayCheckout(j);
+      if (!r.ok) { setErr(j.error || 'We could not start your payment. Please try again.'); return; }
+      setReg(j);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      setErr('Something went wrong on our side. Please try again.'); setStage(-1);
+      setErr('Something went wrong on our side. Please try again.');
     } finally { setBusy(false); }
   }
 
-  // Step 2: open official Razorpay Checkout with the server-issued order.
-  async function openRazorpayCheckout(ord: any) {
+  function onShotFile(f: File | undefined) {
     setErr('');
+    if (!f) return;
+    if (!/^image\/(png|jpeg)$/.test(f.type)) { setErr('Screenshot must be a PNG or JPG image.'); return; }
+    if (f.size > SHOT_MAX_BYTES) { setErr('Screenshot must be under 2.5 MB.'); return; }
+    const rd = new FileReader();
+    rd.onload = () => { setShot(String(rd.result || '')); setShotName(f.name); };
+    rd.onerror = () => setErr('Could not read that image. Please try another.');
+    rd.readAsDataURL(f);
+  }
+
+  async function copyUpi() {
+    const id = cfg?.upiId || '';
+    if (!id) return;
     try {
-      await loadRazorpayScript();
-      const Rzp: any = (window as any).Razorpay;
-      if (!Rzp || !ord?.checkout?.orderId || !ord?.checkout?.keyId) {
-        throw new Error('Checkout unavailable');
-      }
-      const c = ord.checkout;
-      const rzp = new Rzp({
-        key: c.keyId,
-        amount: c.amountPaise,
-        currency: c.currency || 'INR',
-        name: 'Vision X 2026',
-        description: `Team ${c.teamName} — registration fee`,
-        order_id: c.orderId,
-        prefill: { name: c.customerName, email: c.customerEmail, contact: c.customerPhone },
-        notes: { registration_id: c.registrationId },
-        theme: { color: '#8B5CF6' },
-        // User closed checkout without paying: stay on retry state, never mark paid.
-        modal: { ondismiss: () => { setStage(3); setErr('Payment window closed before completion. Your registration is saved — use “Try again” when ready.'); } },
-        handler: (resp: any) => { void verifyRazorpay(ord, resp); },
-      });
-      rzp.on('payment.failed', () => {
-        setStage(-1);
-        setErr('Payment could not be completed. No money was confirmed — you can try again.');
-      });
-      rzp.open();
+      await navigator.clipboard.writeText(id);
     } catch {
-      setStage(3);
-      setErr('The secure checkout could not open. Check your connection, then use “Try again”.');
+      const ta = document.createElement('textarea');
+      ta.value = id; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch {}
+      ta.remove();
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
-  // Step 3: send Razorpay's response to OUR server — it alone decides truth.
-  async function verifyRazorpay(ord: any, resp: any) {
-    setErr(''); setBusy(true); setStage(4);
+  // Step 2: submit the UTR proof. This records a claim — an admin verifies it,
+  // and the receipt page tracks the status until then.
+  async function submitProof() {
+    setErr('');
+    if (!utr.trim()) { setErr('Enter the UPI transaction reference (UTR / UPI Ref No.) from your payment app.'); return; }
+    setProofBusy(true);
     try {
-      const r = await fetch('/api/payments/verify', {
+      const r = await fetch('/api/payments/submit-proof', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          registrationId: ord.registrationId,
-          paymentId: ord.paymentId,
-          razorpay_order_id: resp?.razorpay_order_id,
-          razorpay_payment_id: resp?.razorpay_payment_id,
-          razorpay_signature: resp?.razorpay_signature,
-          clientClaimedSuccess: true,
-        }),
+        body: JSON.stringify({ registrationId: reg.registrationId, utr: utr.trim(), ...(shot ? { screenshot: shot } : {}) }),
       });
       const j = await r.json();
-      setStage(6);
-      if (j.status === 'CONFIRMED' || j.status === 'REVIEW_REQUIRED' || j.status === 'FRAUD_BLOCKED') {
-        router.push('/success?id=' + ord.registrationId);
-      } else if (j.status === 'PENDING') {
-        setErr('Your payment is still processing at the bank. Give it a minute, then use “Try again”.');
-      } else {
-        setErr(j.error || 'We could not confirm your payment yet. Your registration is saved — you can try again.');
-      }
-    } catch { setErr('Verification hit a snag. Please try again in a moment.'); }
-    finally { setBusy(false); }
+      if (!r.ok) { setErr(j.error || 'Could not submit payment proof. Please try again.'); return; }
+      router.push('/success?id=' + reg.registrationId);
+    } catch {
+      setErr('Something went wrong. Please try again.');
+    } finally { setProofBusy(false); }
   }
 
-  // Safe retry: fresh Razorpay order for the same saved registration.
-  async function retryPayment() {
-    if (!order) return;
-    setErr(''); setBusy(true); setStage(1);
-    try {
-      const r = await fetch('/api/payments/order', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationId: order.registrationId }),
-      });
-      const j = await r.json();
-      if (!r.ok) {
-        if (j.status === 'CONFIRMED') { router.push('/success?id=' + order.registrationId); return; }
-        setErr(j.error || 'Could not restart payment. Please try again.'); setStage(-1); return;
-      }
-      setOrder(j);
-      setStage(2);
-      await openRazorpayCheckout(j);
-    } catch { setErr('Something went wrong. Please try again.'); setStage(-1); }
-    finally { setBusy(false); }
-  }
+  const amount = reg?.amount ?? cfg?.fee ?? '…';
+  const alreadyIn = reg && ['REVIEW_REQUIRED', 'VERIFYING', 'CONFIRMED', 'VERIFIED'].includes(String(reg.status || ''));
 
   return (
     <div className="enter mx-auto max-w-2xl pt-10">
       <div className="text-center">
-        <p className="eyebrow justify-center">Secure checkout · Razorpay</p>
+        <p className="eyebrow justify-center">UPI payment</p>
         <h1 className="page-title mt-2 !text-4xl">Payment 💳</h1>
-        <p className="page-sub mx-auto max-w-md">Your spot is confirmed only after our server verifies the payment — never on this screen alone.</p>
+        <p className="page-sub mx-auto max-w-md">Pay with any UPI app, then submit your transaction reference below. Your spot is confirmed after our team verifies it.</p>
       </div>
       {err && <div className="mt-4"><Alert kind="error">{err}</Alert></div>}
-      {stage >= 0 && <div className="card-flat mt-4" role="status"><PxLoader label={STAGES[Math.min(stage, STAGES.length - 1)]} /></div>}
+      {busy && <div className="card-flat mt-4" role="status"><PxLoader label="Saving your registration…" /></div>}
 
-      {!order && (
+      {!reg && (
         <div className="card mt-5">
           <h2 className="font-display text-xl font-bold tracking-tight">Your details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -175,51 +153,95 @@ export default function PaymentPage() {
             ))}
           </div>
 
-          <h2 className="font-display mt-6 text-xl font-bold tracking-tight">Payment method</h2>
-          <p className="page-sub">Secure online payment via Razorpay — UPI, cards, and netbanking are accepted inside the checkout.</p>
-
           <div className="mt-5 flex items-center justify-between rounded-2xl bg-ink px-5 py-4 text-sm text-white">
             <span className="text-white/60">Total due</span>
             <span className="font-display text-2xl font-bold">₹{cfg?.fee ?? '…'}</span>
           </div>
           {cfg && !cfg.configured && (
-            <div className="mt-3"><Alert kind="warn">Online payment is not enabled yet. Please try again later.</Alert></div>
+            <div className="mt-3"><Alert kind="warn">UPI payment is not enabled yet. Please try again later.</Alert></div>
           )}
           <button className="btn-violet mt-4 w-full !py-4 text-base" disabled={busy || (cfg && !cfg.configured)} onClick={startPayment}>
-            {busy ? 'Setting things up…' : <>Proceed to pay <span className="arr">→</span></>}
+            {busy ? 'Saving…' : <>Save & continue to payment <span className="arr">→</span></>}
           </button>
-          <p className="hint mt-2 text-center">The order is created on our server. Card and UPI details go only to Razorpay — never to this site. 🔒</p>
+          <p className="hint mt-2 text-center">You&apos;ll pay on the next screen by scanning our UPI QR with any UPI app. 🔒</p>
         </div>
       )}
 
-      {order && (
-        <div className="card mt-5 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-violet-50 text-2xl" aria-hidden>💳</div>
-          <h2 className="font-display mt-3 text-2xl font-bold">Pay ₹{order.checkout?.amount} via Razorpay</h2>
-          <p className="page-sub">Registration <span className="rounded-lg bg-ink px-2 py-0.5 font-mono text-[12px] font-bold text-white">{order.registrationId}</span></p>
-          <dl className="mx-auto mt-4 max-w-sm space-y-0 overflow-hidden rounded-2xl border border-ink/[0.07] text-left text-[15px]">
-            <div className="flex gap-2 bg-paper/60 px-4 py-2.5"><dt className="w-20 shrink-0 font-mono text-xs uppercase text-ink-muted">Team</dt><dd className="font-semibold">{order.checkout?.teamName}</dd></div>
-            <div className="flex gap-2 px-4 py-2.5"><dt className="w-20 shrink-0 font-mono text-xs uppercase text-ink-muted">Amount</dt><dd className="font-bold">₹{order.checkout?.amount} <span className="font-normal text-ink-muted">INR</span></dd></div>
-            <div className="flex gap-2 bg-paper/60 px-4 py-2.5"><dt className="w-20 shrink-0 font-mono text-xs uppercase text-ink-muted">Order</dt><dd className="break-all font-mono text-[12px]">{order.checkout?.orderId}</dd></div>
-          </dl>
-          <button className="btn-violet mt-5 w-full !py-4 text-base" disabled={busy} onClick={() => openRazorpayCheckout(order)}>
-            {busy ? 'Opening…' : <>Open Razorpay Checkout <span className="arr">→</span></>}
-          </button>
-          <button className="btn-ghost mt-2 w-full" disabled={busy} onClick={retryPayment}>Try again with a fresh order</button>
-          <p className="hint mt-2 text-center">Already paid and closed the window? Use “Try again” — a confirmed registration is never charged twice.</p>
+      {reg && (
+        <div className="card mt-5">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-violet-50 text-2xl" aria-hidden>📱</div>
+          <h2 className="font-display mt-3 text-center text-2xl font-bold">Pay ₹{amount} with any UPI app</h2>
+          <p className="page-sub text-center">Registration <span className="rounded-lg bg-ink px-2 py-0.5 font-mono text-[12px] font-bold text-white">{reg.registrationId}</span>{reg.teamName ? <> · {reg.teamName}</> : null}</p>
+
+          {qrOk ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={`/api/payment-qr?ts=${qrTs}`}
+              alt="UPI QR code for Vision X 2026 entry fee"
+              className="mx-auto mt-5 h-64 w-64 rounded-2xl border border-ink/[0.07] bg-white object-contain p-2"
+              onError={() => setQrOk(false)}
+            />
+          ) : (
+            <div className="mx-auto mt-5 max-w-sm rounded-2xl border border-ink/[0.07] bg-paper/60 px-5 py-6 text-center text-sm text-ink-soft">
+              The QR image is unavailable right now. Please pay directly to the UPI ID below and continue.
+            </div>
+          )}
+
+          <div className="mx-auto mt-4 flex max-w-sm items-center justify-between gap-2 rounded-2xl bg-paper/70 px-4 py-3">
+            <div className="min-w-0">
+              <p className="meta">UPI ID</p>
+              <p className="truncate font-mono text-[15px] font-bold">{cfg?.upiId || '…'}</p>
+            </div>
+            <button className="btn-ghost shrink-0 !px-4 !py-2 text-sm" onClick={copyUpi} disabled={!cfg?.upiId}>
+              {copied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+
+          <div className="mx-auto mt-4 max-w-sm rounded-2xl border border-danger/30 bg-danger/5 px-4 py-3" role="note" aria-live="polite">
+            <p className="text-sm font-semibold leading-relaxed text-danger">
+              Important Note: The name shown during the UPI payment may appear as <span className="font-bold">Medical Agencies</span>. Please do not panic; this is expected. You may continue with the transaction safely.
+            </p>
+          </div>
+
+          {alreadyIn ? (
+            <div className="mt-5 text-center">
+              <Alert kind="warn">We already have a payment proof for this registration — it&apos;s under review.</Alert>
+              <button className="btn-primary mt-3 w-full !py-3.5" onClick={() => router.push('/success?id=' + reg.registrationId)}>Check status →</button>
+            </div>
+          ) : (
+            <div className="mx-auto mt-5 max-w-sm">
+              <label className="label" htmlFor="p-utr">UPI transaction reference (UTR / UPI Ref No.)</label>
+              <input
+                id="p-utr"
+                className="input font-mono"
+                placeholder="e.g. 412345678901"
+                value={utr}
+                onChange={(e) => setUtr(e.target.value)}
+                inputMode="text"
+                autoComplete="off"
+              />
+              <p className="hint mt-1">Find it in your UPI app&apos;s payment history after paying.</p>
+
+              <label className="label mt-4" htmlFor="p-shot">Payment screenshot <span className="font-normal text-ink-muted">(optional)</span></label>
+              <input
+                id="p-shot"
+                type="file"
+                accept="image/png,image/jpeg"
+                className="input"
+                onChange={(e) => onShotFile(e.target.files?.[0])}
+              />
+              {shotName && (
+                <p className="hint mt-1">Attached: {shotName} <button className="link" onClick={() => { setShot(''); setShotName(''); }}>remove</button></p>
+              )}
+
+              <button className="btn-violet mt-4 w-full !py-4 text-base" disabled={proofBusy} onClick={submitProof}>
+                {proofBusy ? 'Submitting…' : <>I&apos;ve paid — submit proof <span className="arr">→</span></>}
+              </button>
+              <p className="hint mt-2 text-center">Submitting records your claim only. Our team verifies it, then your spot is confirmed.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-}
-
-function loadRazorpayScript(): Promise<void> {
-  const src = 'https://checkout.razorpay.com/v1/checkout.js';
-  return new Promise((resolve, reject) => {
-    if ((window as any).Razorpay) return resolve();
-    const s = document.createElement('script');
-    s.src = src; s.async = true;
-    s.onload = () => resolve(); s.onerror = () => reject(new Error('sdk'));
-    document.head.appendChild(s);
-  });
 }

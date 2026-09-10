@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, getSettings } from '@/lib/db';
-import { razorpayConfigured } from '@/lib/payment/razorpay';
+import { upiPaymentsConfigured } from '@/lib/payment/upi';
 
 export async function GET() {
   const s = getSettings();
@@ -23,7 +23,7 @@ export async function GET() {
     contactEmail: s.contact_email, contactPhone: s.contact_phone,
     rules: s.rules, eligibility: s.eligibility, regPrefix: s.reg_prefix,
     schedule: s.schedule || [],
-    paymentsConfigured: razorpayConfigured(),
+    paymentsConfigured: upiPaymentsConfigured(),
     stats: { registrations: regs.c, participants: participants.c, byStatus },
   });
 }

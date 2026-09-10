@@ -1,9 +1,9 @@
 # VISION X 2026 HACKATHON — Registration Platform
 
-One-day, in-person hackathon site: team registration, Razorpay payments with
-server-side verification, fraud screening, team dashboard with check-in QR,
-admin command center, and automatic Excel sync. Built with Next.js 14 +
-built-in Node SQLite (no external database service needed).
+One-day, in-person hackathon site: team registration, admin-managed manual
+UPI payments with admin verification, fraud screening, team dashboard with
+check-in QR, admin command center, and automatic Excel sync. Built with
+Next.js 14 + built-in Node SQLite (no external database service needed).
 
 ## 1. Install
 
@@ -34,8 +34,7 @@ Copy `.env.example` to `.env.local`. What each key does:
 | `OCRSPACE_API_KEY` | Optional OCR.space key for payment-screenshot accuracy; built-in tesseract.js is used when empty |
 | `SMTP_HOST/PORT/USER/PASS/FROM` | Optional confirmation emails; everything fails gracefully when empty |
 | `NEXT_PUBLIC_HACKATHON_NAME` | Public default event name (overridable from Admin Settings UI) |
-| `RAZORPAY_KEY_ID/KEY_SECRET` | Server-only Razorpay keys — test keys (`rzp_test_…`) for dev, live keys only in prod. Never `NEXT_PUBLIC_` |
-| `RAZORPAY_WEBHOOK_SECRET` | Required only if Razorpay webhooks are enabled. Register events URL: `https://your-domain/api/payments/webhook/razorpay` |
+| `RAZORPAY_*` | Legacy, NOT used. The active flow needs no gateway keys — UPI ID + QR are set in Admin → Payment Settings |
 | `FRAUD_AUTO_APPROVE_MAX_RISK` / `FRAUD_REVIEW_MIN_RISK` / `FRAUD_BLOCK_MIN_RISK` | Risk-score (0–100) thresholds for auto-approve / review / block |
 | `EXCEL_EXPORT_PATH` / `EXCEL_SYNC_ENABLED` / `EXCEL_SYNC_MAX_RETRIES` / `EXCEL_STORAGE_PROVIDER` | Automatic Excel sync of registrations |
 | Secrets live only in `.env.local` — never in frontend code. `.env.local` is git-ignored. |
@@ -45,10 +44,52 @@ Copy `.env.example` to `.env.local`. What each key does:
 - `/` — landing page: hero, entry fee / **venue** / team-size stats, format
   (`#about`), event **schedule** (`#schedule`, driven by Admin Settings), FAQ.
 - `/register` — multi-step team signup (team → members → review → payment).
-- `/payment` → `/success` — Razorpay checkout, server-verified; receipt and
-  registration ID issued only after verification.
+- `/payment` — manual UPI payment: scan the admin QR with any UPI app,
+  note the red recipient-name notice, then submit the UTR (+ optional
+  screenshot). Supports `/payment?id=REGID` resume from the register wizard.
+- `/success` — receipt polling `/api/payments/status`; shows confirmed /
+  under-review states.
 - `/verify` — public QR / registration-ID verification for check-in desks.
 - `/preview` — registration preview.
+
+## Payment system (admin-managed UPI, no gateway)
+
+Vision-X-Main uses an admin-managed UPI payment system instead of Razorpay:
+
+- The admin configures a **UPI ID** and uploads a **UPI QR image** in
+  Admin → Payment Settings (single active config in
+  `settings.upi_id` / `settings.qr_image_path`).
+- The payment page loads both live — never hardcoded — via
+  `GET /api/payments/config` + `GET /api/payment-qr`.
+- A red notice warns that the recipient name may appear as
+  **Medical Agencies** (expected, safe to continue).
+- The user submits the **UTR / UPI Ref No.** (+ optional PNG/JPG screenshot
+  ≤ 2.5 MB). This records a payment *claim* (`REVIEW_REQUIRED`) — nothing
+  auto-confirms. An admin VERIFYs/REJECTs it from `/admin/payments`
+  (existing Verify/Reject/Review/Duplicate/Block actions).
+- Duplicate UTRs across registrations are refused (409).
+- Historical Razorpay columns/rows are preserved untouched; the
+  Razorpay checkout, order/verify/webhook endpoints and gateway code were
+  removed from the active flow.
+
+### Admin configuration
+
+1. Log in as Admin.
+2. Open Admin Dashboard → **Payment Settings**.
+3. Enter the UPI ID → Save UPI ID.
+4. Upload the UPI QR image (PNG/JPG ≤ 3 MB). The old QR stays live until
+   the new one is saved (safe replacement).
+5. Open `/payment` and confirm the QR + UPI ID display correctly.
+
+### User payment flow
+
+1. User completes registration (team + members + consent).
+2. User proceeds to Payment (`/payment?id=REGID`).
+3. User scans the QR with any UPI app and completes the payment.
+4. User reads the Medical Agencies notice and continues.
+5. User enters the UTR and optionally attaches the screenshot, then submits.
+6. Status becomes under-review; the receipt page tracks it until an admin
+   verifies → CONFIRMED (or rejects).
 
 ## 5. Team dashboard (`/team/*`)
 
@@ -70,6 +111,7 @@ Login at `/admin/login`, then:
 | `/admin/dashboard` | Overview stats + recent registrations |
 | `/admin/registrations` (+ `/[id]`) | Browse, inspect, verify/reject/flag teams |
 | `/admin/payments` | Revenue, verification queue, fraud review |
+| `/admin/payment-settings` | UPI ID + UPI QR image (live on the payment page instantly) |
 | `/admin/export` | Download `.xlsx` — ALL / VERIFIED / PENDING / REJECTED / DUPLICATE |
 | `/admin/data-sync` | Excel auto-sync jobs, retries |
 | `/admin/audit` | Audit log of admin actions |
@@ -130,14 +172,22 @@ server. (The card hides the photo gracefully until the file exists.)
 
 ```
 src/app/page.tsx                 landing page (fee, venue, schedule, FAQ)
-src/app/register/                multi-step registration
+src/app/register/                multi-step registration → /payment?id=
+src/app/payment/page.tsx         manual UPI: QR + UPI ID + notice + UTR/screenshot proof
 src/app/team/dashboard/page.tsx  team dashboard: QR + venue + Tirupati location
 src/app/admin/settings/page.tsx  settings incl. visual schedule editor
+src/app/admin/payment-settings/  UPI ID + QR upload UI
 src/app/api/settings/route.ts    public config endpoint
 src/app/api/admin/settings/      admin config endpoint
+src/app/api/admin/payment-settings/  UPI config endpoints (GET/PUT + qr POST)
+src/app/api/payments/config      public UPI config (upiId, qrImageUrl, fee)
+src/app/api/payments/create      registration + PENDING upi_manual payment
+src/app/api/payments/submit-proof  UTR/screenshot proof → REVIEW_REQUIRED
+src/app/api/payment-qr           public active-QR image serving
 src/lib/db.ts                    SQLite store + migrations (V1–V4)
-src/lib/payment/                 Razorpay router, verification, state machine
-src/lib/fraud/                   risk engine + rules
+src/lib/payment/upi.ts           UPI helpers (validation, QR lookup, image parsing)
+src/lib/payment/payment-router.ts + state-machine.ts  status transitions (kept)
+src/lib/fraud/                   risk engine + rules (kept, incl. duplicate UTR)
 src/lib/excel/                   workbook + sync engine/queue
 public/images/college.jpg        college photo (add manually, git-ignored pattern-free)
 data/                            SQLite DB, uploads, workbook (git-ignored, local only)
@@ -147,8 +197,9 @@ scripts/init-db.mjs              DB initialisation helper
 ## 11. Deploy notes
 
 - On hosts with ephemeral disks, mount a persistent volume at `./data`
-  (SQLite DB, uploads, and the master workbook all live under `./data`).
-- Set live Razorpay keys + webhook secret only in production env.
+  (SQLite DB, uploads — incl. the active UPI QR and payment screenshots —
+  and the master workbook all live under `./data`).
+- No payment-gateway keys are needed in any environment.
 - `ADMIN_JWT_SECRET` / `TEAM_JWT_SECRET` must be long random strings in prod.
 
 ## 12. What's tracked in git

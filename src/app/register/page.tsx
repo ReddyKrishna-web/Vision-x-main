@@ -28,7 +28,7 @@ export default function RegisterPage() {
       <div className="text-center">
         <p className="eyebrow justify-center">Vision X 2026 · Registration</p>
         <h1 className="page-title mt-2 !text-4xl sm:!text-5xl">Register your team 🎉</h1>
-        <p className="page-sub mx-auto max-w-md">Three minutes, three steps. Payment happens securely via Razorpay at the end.</p>
+        <p className="page-sub mx-auto max-w-md">Three minutes, three steps. Payment happens via UPI at the end.</p>
       </div>
       <div className="card-flat mt-6 !rounded-[20px]">
         <Stepper current={Math.min(d.step, 2)} />

@@ -190,8 +190,8 @@ export default function Home() {
         <Reveal><SectionHead no="03" title="Good to know" sub="Payments, safety, and who to ping." /></Reveal>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            ['💳', 'How do I pay?', 'Online during registration — UPI, card, or netbanking via Razorpay. Your spot is confirmed only after our server verifies the payment.'],
-            ['🛡️', 'Is it safe?', 'Yes. We never ask for your UPI PIN or OTP — only Razorpay handles money. This site never sees card details.'],
+            ['💳', 'How do I pay?', 'During registration you scan our UPI QR with any UPI app and submit the transaction reference. Your spot is confirmed after our team verifies the payment.'],
+            ['🛡️', 'Is it safe?', 'Yes. You pay directly inside your own UPI app — this site never sees your UPI PIN or bank details, and we never ask for OTPs.'],
             ['💬', 'Need help?', `Write to ${cfg?.contactEmail || 'the organising team'} or call ${cfg?.contactPhone || 'us'} — we reply fast on event week.`],
           ].map(([e, t, d], i) => (
             <Reveal key={t} delay={i as 0 | 1 | 2}>

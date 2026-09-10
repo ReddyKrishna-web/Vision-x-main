@@ -88,7 +88,7 @@ export default function SettingsPage() {
   return (
     <div className="enter mx-auto max-w-3xl pt-10">
       <h1 className="page-title">Settings</h1>
-      <p className="page-sub">These control what participants see on the site — venue, location map, and the landing-page schedule. Payments are processed via Razorpay.</p>
+      <p className="page-sub">These control what participants see on the site — venue, location map, and the landing-page schedule. Entry-fee payments are collected via admin-managed UPI (see Payment Settings on the dashboard).</p>
       <div className="card mt-5 grid gap-4 sm:grid-cols-2">
         {FIELDS.map((k) => (
           <div key={k} className={WIDE.has(k) ? 'sm:col-span-2' : ''}>

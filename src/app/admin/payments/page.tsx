@@ -101,7 +101,7 @@ export default function AdminPaymentsPage() {
             <div>
               <h3 className="text-sm font-semibold">Payment trail</h3>
               <dl className="mt-2 space-y-1.5 text-sm">
-                {[['Provider', sel.payment.provider], ['Gateway order', sel.payment.provider_order_id], ['Gateway payment', sel.payment.provider_payment_id], ['UTR / reference', sel.payment.transaction_id || sel.payment.payment_reference], ['Gateway says', sel.payment.gateway_status], ['Verification', sel.payment.verification_status], ['Webhook', sel.payment.webhook_verified ? 'Verified' : 'Not received']].map(([k, v]: any) => (
+                {[['Provider', sel.payment.provider], ['Order ref', sel.payment.provider_order_id], ['Gateway payment', sel.payment.provider_payment_id], ['UTR / reference', sel.payment.transaction_id || sel.payment.payment_reference], ['Gateway says', sel.payment.gateway_status], ['Verification', sel.payment.verification_status], ['Webhook', sel.payment.webhook_verified ? 'Verified' : '']].filter(([, v]: any) => v).map(([k, v]: any) => (
                   <div key={k} className="flex gap-2"><dt className="w-32 shrink-0 text-ink-muted">{k}</dt><dd className="font-mono text-[13px]">{v || '—'}</dd></div>
                 ))}
               </dl>
