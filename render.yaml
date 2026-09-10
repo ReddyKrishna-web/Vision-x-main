@@ -24,8 +24,13 @@ services:
         sync: false
       - key: NEXT_PUBLIC_HACKATHON_NAME
         value: VISION X 2026 HACKATHON
+      # Persistent data lives on the disk mounted below. DATA_DIR keeps the
+      # SQLite DB + uploads on the disk (standalone server chdir's into
+      # .next/standalone, so a relative ./data would be wiped each deploy).
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
       - key: EXCEL_EXPORT_PATH
-        value: ./data/vision-x-registrations.xlsx
+        value: /opt/render/project/src/data/vision-x-registrations.xlsx
       - key: EXCEL_SYNC_ENABLED
         value: true
       - key: EXCEL_SYNC_MAX_RETRIES

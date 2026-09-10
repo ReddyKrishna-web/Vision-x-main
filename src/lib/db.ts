@@ -4,7 +4,15 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Overridable so hosts with a persistent disk can point data at the mount
+// (e.g. DATA_DIR=/opt/render/project/src/data on Render). Defaults to
+// ./data next to the running server, preserving local/Docker behavior.
+// NOTE: under `output: 'standalone'` the server chdir's into
+// `.next/standalone`, so a relative default resolves there — set DATA_DIR
+// explicitly on hosts where deploys wipe the build directory.
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(process.cwd(), 'data');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const DB_PATH = path.join(DATA_DIR, 'visionx.db');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });

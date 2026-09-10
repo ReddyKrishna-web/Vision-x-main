@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { db, getSettings } from '@/lib/db';
 import { upiPaymentsConfigured } from '@/lib/payment/upi';
 
+// Must be live: fee, reg-open flag and counts change at runtime via admin UI.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const s = getSettings();
   const regs = db().prepare('SELECT COUNT(*) c FROM registrations').get() as any;

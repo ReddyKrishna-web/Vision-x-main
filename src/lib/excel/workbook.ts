@@ -7,7 +7,10 @@ import { db, audit } from '@/lib/db';
 // Sheets: Registrations | Team Members | Payments | Fraud Review | Sync Log
 
 export function workbookPath(): string {
-  return process.env.EXCEL_EXPORT_PATH || path.join(process.cwd(), 'data', 'vision-x-registrations.xlsx');
+  if (process.env.EXCEL_EXPORT_PATH) return process.env.EXCEL_EXPORT_PATH;
+  // Follow DATA_DIR when set (see src/lib/db.ts), else legacy ./data default.
+  const base = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(process.cwd(), 'data');
+  return path.join(base, 'vision-x-registrations.xlsx');
 }
 
 const HEADER_FILL: any = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E7490' } };
