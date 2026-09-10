@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, PxLoader } from '@/components/ui';
+import { YEAR_OPTIONS } from '@/lib/validators';
 
 const SHOT_MAX_BYTES = Math.round(2.5 * 1024 * 1024);
 
@@ -57,6 +58,16 @@ export default function PaymentPage() {
     setErr('');
     if (!form.teamName || !form.leaderName || !form.leaderEmail || !form.leaderPhone) {
       setErr('Please fill in the team name and leader details first.'); return;
+    }
+    if (!form.college || String(form.college).trim().length < 2 || !form.department || String(form.department).trim().length < 2 || !(YEAR_OPTIONS as readonly string[]).includes(String(form.year || ''))) {
+      setErr('Please fill in the leader’s college, department, and academic year.'); return;
+    }
+    for (let i = 0; i < members.length; i++) {
+      const m = members[i] || {};
+      if (!m.name || !m.rollNumber || !m.email) { setErr(`Complete Member ${i + 1} (name, roll number, email).`); return; }
+      if (!m.college || String(m.college).trim().length < 2 || !m.department || String(m.department).trim().length < 2 || !(YEAR_OPTIONS as readonly string[]).includes(String(m.year || ''))) {
+        setErr(`Please fill in Member ${i + 1}’s college, department, and academic year.`); return;
+      }
     }
     setBusy(true);
     try {
@@ -140,6 +151,9 @@ export default function PaymentPage() {
             <div><label className="label" htmlFor="p-leader">Team leader name</label><input id="p-leader" className="input" value={form.leaderName} onChange={(e) => set('leaderName', e.target.value)} /></div>
             <div><label className="label" htmlFor="p-email">Leader email</label><input id="p-email" className="input" type="email" value={form.leaderEmail} onChange={(e) => set('leaderEmail', e.target.value)} /></div>
             <div className="sm:col-span-2 sm:max-w-[50%]"><label className="label" htmlFor="p-phone">Leader phone</label><input id="p-phone" className="input" inputMode="numeric" value={form.leaderPhone} onChange={(e) => set('leaderPhone', e.target.value)} /></div>
+            <div><label className="label" htmlFor="p-college">Leader college</label><input id="p-college" className="input" placeholder="College name" value={form.college || ''} onChange={(e) => set('college', e.target.value)} /></div>
+            <div><label className="label" htmlFor="p-dept">Leader department</label><input id="p-dept" className="input" placeholder="e.g. Computer Science" value={form.department || ''} onChange={(e) => set('department', e.target.value)} /></div>
+            <div className="sm:max-w-[50%]"><label className="label" htmlFor="p-year">Leader academic year</label><select id="p-year" className="input" value={form.year || ''} onChange={(e) => set('year', e.target.value)}><option value="">Select…</option>{YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
           </div>
 
           <h2 className="font-display mt-6 text-xl font-bold tracking-tight">Members</h2>
@@ -149,6 +163,9 @@ export default function PaymentPage() {
                 <input aria-label={`Member ${i + 1} name`} className="input" placeholder={`Member ${i + 1} name`} value={m.name} onChange={(e) => setM(i, 'name', e.target.value)} />
                 <input aria-label="Roll number" className="input" placeholder="Roll number" value={m.rollNumber} onChange={(e) => setM(i, 'rollNumber', e.target.value)} />
                 <input aria-label="Email" className="input" placeholder="Email" value={m.email} onChange={(e) => setM(i, 'email', e.target.value)} />
+                <input aria-label="College" className="input" placeholder="College" value={m.college || ''} onChange={(e) => setM(i, 'college', e.target.value)} />
+                <input aria-label="Department" className="input" placeholder="Department" value={m.department || ''} onChange={(e) => setM(i, 'department', e.target.value)} />
+                <select aria-label="Academic year" className="input" value={m.year || ''} onChange={(e) => setM(i, 'year', e.target.value)}><option value="">Year…</option>{YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}</select>
               </div>
             ))}
           </div>

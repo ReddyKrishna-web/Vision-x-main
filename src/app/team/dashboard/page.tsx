@@ -101,6 +101,9 @@ export default function TeamDashboardPage() {
                 <li key={m.idx} className="py-2">
                   <span className="font-medium">{m.name}</span>{' '}
                   <span className="text-ink-muted">· {m.roll_number} · {m.email}{m.phone ? ` · ${m.phone}` : ''}</span>
+                  {(m.college || m.department || m.year) && (
+                    <><br /><span className="text-ink-muted">{[m.college, m.department, m.year].filter(Boolean).join(' · ')}</span></>
+                  )}
                 </li>
               ))}
               {me.members.length === 0 && <li className="py-2 text-ink-muted">No members found.</li>}

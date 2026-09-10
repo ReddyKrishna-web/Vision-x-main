@@ -44,6 +44,9 @@ Copy `.env.example` to `.env.local`. What each key does:
 - `/` — landing page: hero, entry fee / **venue** / team-size stats, format
   (`#about`), event **schedule** (`#schedule`, driven by Admin Settings), FAQ.
 - `/register` — multi-step team signup (team → members → review → payment).
+  Team leader and every member provide name, roll number, email plus
+  **college, department, and academic year** (year is a fixed
+  1st–4th Year list; each member has their own values).
 - `/payment` — manual UPI payment: scan the admin QR with any UPI app,
   note the red recipient-name notice, then submit the UTR (+ optional
   screenshot). Supports `/payment?id=REGID` resume from the register wizard.
@@ -150,7 +153,19 @@ server. (The card hides the photo gracefully until the file exists.)
 - DB: built-in Node SQLite at `data/visionx.db` (WAL mode). Schema +
   migrations live in `src/lib/db.ts` (V1 base → V2 payments/fraud/Excel →
   V3 team login → V4 venue/Tirupati location). Swap to Postgres/Supabase
-  later via `src/lib/db.ts`.
+  later via `src/lib/db.ts`. Academic columns (`college`, `department`,
+  `year`) exist on both `registrations` (leader) and `team_members`
+  (per-member); old rows with empty values keep working.
+- Excel auto-sync: every website transaction that changes registration or
+  payment state (new registration, payment proof, admin verify/reject/…)
+  calls `triggerSync()` → a persistent `excel_sync_jobs` row → background
+  upsert into the master workbook (`EXCEL_EXPORT_PATH`, default
+  `./data/vision-x-registrations.xlsx`). Upserts are keyed by registration
+  ID, so re-syncs update in place and never duplicate; writes are atomic
+  (tmp + rename) with retry queue and startup recovery. Sheets already
+  include College/Department/Year for leaders and members. No manual
+  download is needed — the file on disk is the live sheet. On hosts with
+  ephemeral disks, mount a persistent volume at `./data`.
 - Uploads (payment screenshots) are stored privately in `data/uploads/` and
   served only to admins via `/api/uploads/[id]`.
 - The master workbook (`EXCEL_EXPORT_PATH`, default

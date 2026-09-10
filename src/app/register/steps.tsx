@@ -1,5 +1,6 @@
 'use client';
 import { Alert } from '@/components/ui';
+import { YEAR_OPTIONS } from '@/lib/validators';
 
 export function MembersStep({ members, onChange, onBack, onNext }: any) {
   return (
@@ -15,6 +16,9 @@ export function MembersStep({ members, onChange, onBack, onNext }: any) {
             <div className="sm:col-span-2"><label className="label" htmlFor={`m${i}-name`}>Full name</label><input id={`m${i}-name`} className="input" placeholder={`Member ${i + 1} full name`} value={m.name || ''} onChange={e => onChange(i, 'name', e.target.value)} /></div>
             <div><label className="label" htmlFor={`m${i}-roll`}>Roll number</label><input id={`m${i}-roll`} className="input" placeholder="e.g. 22CS042" value={m.rollNumber || ''} onChange={e => onChange(i, 'rollNumber', e.target.value)} /></div>
             <div><label className="label" htmlFor={`m${i}-email`}>Email</label><input id={`m${i}-email`} className="input" type="email" placeholder="member@college.edu" value={m.email || ''} onChange={e => onChange(i, 'email', e.target.value)} /></div>
+            <div><label className="label" htmlFor={`m${i}-college`}>College</label><input id={`m${i}-college`} className="input" placeholder="College name" value={m.college || ''} onChange={e => onChange(i, 'college', e.target.value)} /></div>
+            <div><label className="label" htmlFor={`m${i}-dept`}>Department</label><input id={`m${i}-dept`} className="input" placeholder="e.g. Computer Science" value={m.department || ''} onChange={e => onChange(i, 'department', e.target.value)} /></div>
+            <div className="sm:col-span-2 sm:max-w-[50%]"><label className="label" htmlFor={`m${i}-year`}>Academic year</label><select id={`m${i}-year`} className="input" value={m.year || ''} onChange={e => onChange(i, 'year', e.target.value)}><option value="">Select…</option>{YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
           </div>
         </fieldset>
       ))}

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KEY, loadDraft, emailOk, phoneOk, type Draft } from './draft';
+import { YEAR_OPTIONS } from '@/lib/validators';
 
 export function useRegister() {
   const router = useRouter();
@@ -23,6 +24,9 @@ export function useRegister() {
     if (!emailOk(t.leaderEmail)) return 'Please enter a valid email.';
     if (!phoneOk(t.leaderPhone)) return 'Enter a valid 10-digit Indian mobile number.';
     if (!t.teamSize) return 'Select team size.';
+    if (!t.college || String(t.college).trim().length < 2) return 'Enter the leader’s college.';
+    if (!t.department || String(t.department).trim().length < 2) return 'Enter the leader’s department.';
+    if (!(YEAR_OPTIONS as readonly string[]).includes(String(t.year || ''))) return 'Select the leader’s academic year.';
     return '';
   }
   function validMembers() {
@@ -32,6 +36,9 @@ export function useRegister() {
     for (let i = 0; i < n; i++) {
       const m = d.members[i] || {};
       if (!m.name || !m.rollNumber || !emailOk(m.email)) return 'Complete Member ' + (i + 1) + ' (name, roll number, email).';
+      if (!m.college || String(m.college).trim().length < 2) return `Enter Member ${i + 1}’s college.`;
+      if (!m.department || String(m.department).trim().length < 2) return `Enter Member ${i + 1}’s department.`;
+      if (!(YEAR_OPTIONS as readonly string[]).includes(String(m.year || ''))) return `Select Member ${i + 1}’s academic year.`;
       const r = String(m.rollNumber).toLowerCase();
       if (rolls.has(r)) return 'Roll numbers must be unique within a team.';
       rolls.add(r);

@@ -4,6 +4,7 @@ import { audit, db, getSettings, nextRegistrationId } from '@/lib/db';
 import { memberSchema, sanitize, teamInfoSchema } from '@/lib/validators';
 import { upiPaymentsConfigured } from '@/lib/payment/upi';
 import { assessPaymentRisk } from '@/lib/fraud';
+import { triggerSync } from '@/lib/excel/sync-engine';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,9 @@ export async function POST(req: NextRequest) {
     } catch { /* never block registration on risk engine errors */ }
 
     audit('PAYMENT_CREATED', '', regId, 'provider=upi_manual');
+    // Auto-sync the new registration to the master workbook (fire-and-forget:
+    // registration success never depends on sync; jobs retry on failure).
+    try { triggerSync(regId); } catch { /* sync must never break registration */ }
     return NextResponse.json({
       registrationId: regId,
       paymentId,
