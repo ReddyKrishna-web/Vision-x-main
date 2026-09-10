@@ -252,6 +252,28 @@ npm install && npm run build && npm start   # serves :30001
 - No gateway/webhook configuration needed. Serve over HTTPS; QR image loads
   same-origin, so no mixed-content issues.
 
+### Docker (VPS / Render / Fly.io / Railway)
+
+The repo ships a minimal `Dockerfile` (Next.js standalone, Node 22). The
+image needs a persistent volume at `/app/data` — without it, SQLite and
+uploads reset on every redeploy. Never use Vercel/Netlify-style ephemeral
+hosts for this app: the database cannot persist there.
+
+```bash
+docker build -t vision-x-main .
+docker run -d --name vision-x -p 30001:30001 \
+  -v visionx-data:/app/data \
+  -e ADMIN_EMAIL=you@example.org \
+  -e ADMIN_PASSWORD=your-strong-password \
+  -e ADMIN_JWT_SECRET=at-least-32-random-characters \
+  -e TEAM_JWT_SECRET=another-long-random-secret \
+  vision-x-main
+```
+
+On first boot the DB auto-migrates (V1–V4 seed venue/Tirupati defaults).
+Then open Admin → Payment Settings and set the production UPI ID + QR.
+Localhost is unaffected (`npm run dev` ignores the Dockerfile entirely).
+
 ## 17. Contributing
 
 Keep changes small and additive: validate → save primary data → sync side

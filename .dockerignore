@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+Dockerfile
+.dockerignore
+venv/
+*.tsbuildinfo
+data/*.db*
+data/*.xlsx
+data/uploads/*
+!data/uploads/.gitkeep
+.env
+.env.local
+npm-debug.log
