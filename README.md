@@ -80,7 +80,7 @@ admins** (verify payments, manage registrations, export reports).
 | Storage | Local files under `data/` (DB, `uploads/`, workbook); `EXCEL_STORAGE_PROVIDER=local` |
 | QR / OCR / Excel | `qrcode` 1.5.4, `tesseract.js` 5.1.1 (+ optional OCR.space key), `exceljs` 4.4.0 |
 | Testing | No unit/e2e suites; `playwright-core` is used only by the dev screenshot harness `scripts/shots.cjs`; verification via `tsc`, `next build`, manual API tests |
-| CI/CD | None (no workflows, no Docker) |
+| Deploy | `Dockerfile` (Next.js standalone, Node 22-alpine), `docker-compose.yml` (persistent `vision-x-data` volume), `render.yaml` Blueprint (Render web service + 5 GB disk, health check `/api/settings`); no GitHub Actions |
 
 ## 5. Project architecture
 
@@ -127,12 +127,18 @@ src/lib/excel/                   workbook upsert, sync queue/engine
 src/lib/ocr.ts | rate-limit.ts   screenshot OCR helper, in-memory rate limits
 src/components/                  ui.tsx primitives, Reveal.tsx
 scripts/init-db.mjs              create DB | shots.cjs  dev screenshot harness
+scripts/start.mjs                production entrypoint: respects `$PORT` (Render/Heroku), defaults to 30001
 public/images/                   college photo (add college.jpg manually)
+Dockerfile                       prod image: Node 22-alpine, Next.js standalone, volume at /app/data
+docker-compose.yml               local prod stack: app + persistent vision-x-data volume, healthcheck
+render.yaml                      Render Blueprint: Node 22, `npm run start`, /api/settings health check, DATA_DIR + disk
+.env.production.example          prod env template (copy to .env.production, never commit real secrets)
+DEPLOYMENT.md                    full deploy guide: local Docker, VPS, Render, Railway, Fly.io, backups
 ```
 
 ## 7. Installation & local development
 
-Verified steps (Node 20+):
+Verified steps (Node 22.5+, per `engines` in `package.json`):
 
 ```bash
 git clone https://github.com/ReddyKrishna-web/Vision-x-main.git
@@ -164,7 +170,14 @@ NEXT_PUBLIC_HACKATHON_NAME="VISION X 2026 HACKATHON"
 FRAUD_AUTO_APPROVE_MAX_RISK=29  FRAUD_REVIEW_MIN_RISK=60  FRAUD_BLOCK_MIN_RISK=80
 EXCEL_EXPORT_PATH=./data/vision-x-registrations.xlsx
 EXCEL_SYNC_ENABLED=true  EXCEL_SYNC_MAX_RETRIES=5  EXCEL_STORAGE_PROVIDER=local
+# Production-only (see .env.production.example / render.yaml):
+# DATA_DIR=/opt/render/project/src/data  # persistent disk path on Render
+# PORT=30001                              # respected by scripts/start.mjs; hosts like Render inject their own
 ```
+
+Local dev uses `.env.example` → `.env.local`. Production (Docker / VPS /
+hosting) uses `.env.production.example` → `.env.production` (git-ignored —
+never commit real secrets; set them in your host's env dashboard instead).
 
 ## 9. Registration workflow
 
@@ -237,20 +250,55 @@ keys if they were ever real.
 
 ## 15. CI/CD pipeline
 
-None. No GitHub Actions, no Docker, no deploy hooks. Verification is manual
-(`tsc` + `next build` + API tests above) before push.
+No GitHub Actions. Shipping path is Docker + host auto-deploy: push to
+`main` → Render/Railway/Fly redeploys from `Dockerfile` (or `render.yaml`
+Blueprint on Render). Verify locally first (`tsc` + `next build` + API
+tests in §13) before push.
 
 ## 16. Production deployment
 
 ```bash
-npm install && npm run build && npm start   # serves :30001
+npm install && npm run build && npm start   # serves :30001 (or $PORT if set)
 ```
 
 - Set `ADMIN_*`, `TEAM_JWT_SECRET`, SMTP/OCRSPACE as needed in production env.
 - Mount a **persistent volume at `./data`** (SQLite, uploads incl. active
   UPI QR + proofs, workbook all live there; ephemeral disks lose them).
+  On Render the Blueprint sets `DATA_DIR` + `EXCEL_EXPORT_PATH` to the
+  mounted disk path (the standalone server chdir's, so a relative `./data`
+  would be wiped each deploy).
+- `scripts/start.mjs` respects the host's `$PORT` (Render injects e.g.
+  10000) and defaults to 30001 locally / in Docker.
+- Health check: `GET /api/settings` (live site config; used by
+  `render.yaml` and `docker-compose.yml`).
 - No gateway/webhook configuration needed. Serve over HTTPS; QR image loads
   same-origin, so no mixed-content issues.
+
+### Docker Compose (local prod / VPS)
+
+```bash
+cp .env.production.example .env.production   # fill real secrets (git-ignored)
+docker compose up --pull always -d
+docker compose logs -f vision-x
+# app at http://localhost:30001 ; data persists in vision-x-data volume
+```
+
+Full guide (systemd, Nginx, backups, troubleshooting): see `DEPLOYMENT.md`.
+
+### Render (Blueprint)
+
+`render.yaml` defines the web service + 5 GB disk at
+`/opt/render/project/src/data`:
+
+- Build: `npm ci; npm run build` · Start: `npm run start` · Node 22.12.0
+- Health check path: `/api/settings`
+- Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_JWT_SECRET`,
+  `TEAM_JWT_SECRET` in the Render dashboard (sync: false — never commit).
+- Deploy via "New > Blueprint" or `render blueprint launch`; Render
+  auto-deploys on push to `main`.
+
+Railway / Fly.io: same image, mount a volume at `/app/data`, set env from
+`.env.production` — see `DEPLOYMENT.md` for step-by-step.
 
 ### Docker (VPS / Render / Fly.io / Railway)
 
