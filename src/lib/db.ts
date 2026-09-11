@@ -10,14 +10,25 @@ import path from 'node:path';
 // NOTE: under `output: 'standalone'` the server chdir's into
 // `.next/standalone`, so a relative default resolves there — set DATA_DIR
 // explicitly on hosts where deploys wipe the build directory.
+// On Vercel the filesystem is read-only except /tmp, so default there to
+// /tmp/visionx-data (ephemeral — survives only until the instance recycles).
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
-  : path.join(process.cwd(), 'data');
+  : process.env.VERCEL === '1' || process.env.VERCEL_ENV !== undefined
+    ? path.join('/tmp', 'visionx-data')
+    : path.join(process.cwd(), 'data');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const DB_PATH = path.join(DATA_DIR, 'visionx.db');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-fs.writeFileSync(path.join(UPLOAD_DIR, '.gitkeep'), '');
+try {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  fs.writeFileSync(path.join(UPLOAD_DIR, '.gitkeep'), '');
+} catch {
+  // Read-only / ephemeral filesystems (e.g. Vercel serverless): the DB holds
+  // the source of truth (QR image is stored as a data URL in settings), so a
+  // failed local dir/file write must never crash the app — file copies are
+  // best-effort caches only.
+}
 
 let _db: DatabaseSync | null = null;
 export function db(): DatabaseSync {
@@ -293,6 +304,19 @@ function migrateV4(d: DatabaseSync) {
   } catch {}
   try {
     d.exec(`UPDATE settings SET map_link='https://www.google.com/maps/search/?api=1&query=Annamacharya+Institute+of+Technology+and+Sciences+Venkatapuram+Renigunta+Tirupati+Andhra+Pradesh+517520' WHERE id=1 AND (map_link IS NULL OR map_link='' OR map_link LIKE '%Rajampet%' OR map_link LIKE '%Kadapa%' OR map_link LIKE '%516126%')`);
+  } catch {}
+  migrateV5(d);
+}
+
+// V5: Vercel-compatible QR storage — keep the full QR image as a data URL in
+// the DB so uploads/serving never depend on a writable filesystem (Vercel is
+// read-only except /tmp and ephemeral across instances). The file under
+// uploads/ remains as a best-effort cache for Docker/Render/VPS.
+function migrateV5(d: DatabaseSync) {
+  try {
+    const rows: any[] = d.prepare(`PRAGMA table_info(settings)`).all();
+    const cols = new Set(rows.map((r) => String(r.name)));
+    if (!cols.has('qr_image_data')) d.exec(`ALTER TABLE settings ADD COLUMN qr_image_data TEXT DEFAULT ''`);
   } catch {}
 }
 

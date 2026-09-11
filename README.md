@@ -304,8 +304,10 @@ Railway / Fly.io: same image, mount a volume at `/app/data`, set env from
 
 The repo ships a minimal `Dockerfile` (Next.js standalone, Node 22). The
 image needs a persistent volume at `/app/data` — without it, SQLite and
-uploads reset on every redeploy. Never use Vercel/Netlify-style ephemeral
-hosts for this app: the database cannot persist there.
+uploads reset on every redeploy. Vercel works for demo/trial (QR uploads are
+stored DB-backed and served without disk, SQLite falls back to `/tmp`), but
+all data there is ephemeral across instances/redeploys — use Docker/Render/
+Railway/Fly with a persistent disk for production.
 
 ```bash
 docker build -t vision-x-main .

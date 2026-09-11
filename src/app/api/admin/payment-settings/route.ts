@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { audit, db, getSettings } from '@/lib/db';
-import { UPI_ID_RE, qrImageFile, upiId } from '@/lib/payment/upi';
+import { UPI_ID_RE, qrImageDataUrl, qrImageFile, upiId } from '@/lib/payment/upi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export async function GET() {
     const s = getSettings();
     return NextResponse.json({
       upiId: upiId(),
-      hasQr: qrImageFile() !== null,
+      hasQr: qrImageDataUrl() !== '' || qrImageFile() !== null,
       fee: s.registration_fee || 0,
       updatedAt: s.updated_at || '',
     });

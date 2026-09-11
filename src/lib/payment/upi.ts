@@ -27,11 +27,26 @@ export function qrImageName(): string {
   }
 }
 
+// DB-backed QR image (Vercel-safe): full `data:image/...` URL stored in
+// settings.qr_image_data. Preferred over the file copy because serverless
+// filesystems are read-only/ephemeral while the DB row survives per-instance.
+export function qrImageDataUrl(): string {
+  try {
+    const s: any = getSettings();
+    const v = String(s.qr_image_data || '').trim();
+    if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=\s]+$/.test(v)) return v;
+    return '';
+  } catch {
+    return '';
+  }
+}
+
 // Absolute path of the active QR file, or null when not configured.
 // basename() confines serving to the upload dir (no path traversal).
+// Returns null when the setting holds a DB data URL (no file to serve).
 export function qrImageFile(): string | null {
   const rel = qrImageName();
-  if (!rel) return null;
+  if (!rel || rel.startsWith('data:')) return null;
   const f = path.join(UPLOAD_DIR_PATH, path.basename(rel));
   try {
     if (fs.existsSync(f) && fs.statSync(f).isFile()) return f;
@@ -42,10 +57,11 @@ export function qrImageFile(): string | null {
 }
 
 // The payment UI is enabled only when BOTH are live: a valid UPI ID and an
-// actual QR file on disk. Updating either in Payment Settings reflects
-// immediately because every check reads live settings + disk.
+// actual QR image (DB data URL preferred, disk file as fallback). Updating
+// either in Payment Settings reflects immediately because every check reads
+// live settings (+ disk as fallback).
 export function upiPaymentsConfigured(): boolean {
-  return UPI_ID_RE.test(upiId()) && qrImageFile() !== null;
+  return UPI_ID_RE.test(upiId()) && (qrImageDataUrl() !== '' || qrImageFile() !== null);
 }
 
 export type ParsedImage = { ext: 'png' | 'jpg'; buf: Buffer };

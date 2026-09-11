@@ -75,7 +75,14 @@ export async function POST(req: NextRequest) {
       }
       const safeReg = regId.replace(/[^A-Za-z0-9\-]/g, '').slice(0, 24) || 'reg';
       shotName = `payshot-${safeReg}-${Date.now()}.${img.ext}`;
-      fs.writeFileSync(path.join(UPLOAD_DIR_PATH, shotName), img.buf);
+      try {
+        fs.writeFileSync(path.join(UPLOAD_DIR_PATH, shotName), img.buf);
+      } catch {
+        // Read-only serverless FS (Vercel): keep the UTR claim, drop the
+        // screenshot cache — the proof must not fail just because the disk
+        // isn't writable. Admin still reviews the UTR.
+        shotName = '';
+      }
     }
 
     db().prepare(
